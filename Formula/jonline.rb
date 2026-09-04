@@ -5,9 +5,9 @@
 class Jonline < Formula
   desc "Jonline federated social server"
   homepage "https://github.com/jonlatane/jonline"
-  url "https://github.com/jonlatane/jonline/releases/download/v0.5.553-e0fba7f/jonline-0.5.553-e0fba7f-macos-arm64.tar.gz"
-  sha256 "051d1e86db492a73e1b4066ec16dbdc25e906cfed2693770893831e633cb01b3"
-  version "0.5.553-e0fba7f"
+  url "https://github.com/jonlatane/jonline/releases/download/v0.5.553-b854e6c/jonline-0.5.553-b854e6c-macos-arm64.tar.gz"
+  sha256 "38fe6e378dd99d15686a1da4930584e45f76e10329995c9e41b4302a093c8bbe"
+  version "0.5.553-b854e6c"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -78,7 +78,7 @@ class Jonline < Formula
                   environment edit_environment
                   local_db_create local_db_drop local_db_reset local_db_connect
                   local_minio_start local_minio_create local_minio_delete
-                  delete_expired_tokens delete_unowned_media sync_event_sync_sources update_user_counts convert_media_sizes generate_preview_images
+                  delete_expired_tokens delete_unowned_media sync_sources update_user_counts convert_media_sizes generate_preview_images
                   set_permission delete_preview_images disable_cdn_grpc
                   to_db_id to_proto_id grpcurl
                   deploy
@@ -116,7 +116,7 @@ class Jonline < Formula
                                                                      most deploys
                     jobs                     Run background jobs on a loop (#{etc}/jonline/background_jobs.sh) --
                                              delete_expired_tokens every 2m, delete_unowned_media every 8h,
-                                             sync_event_sync_sources every 1m, update_user_counts every 1h,
+                                             sync_sources every 1m, update_user_counts every 1h,
                                              convert_media_sizes every 10m, ...
                     version                  Print the Jonline server version (jonline-server --version)
                     local_instances_stop     Stop any running jonline-server processes
@@ -142,7 +142,7 @@ class Jonline < Formula
                 
                     delete_expired_tokens    Delete expired auth tokens from the database
                     delete_unowned_media     Delete media no longer referenced by any post/user/etc.
-                    sync_event_sync_sources  Sync any EventSyncSource (ICS subscription) that's due, per its
+                    sync_sources             Sync any SyncSource (ICS subscription) that's due, per its
                                              sync_interval_seconds/last_synced_at
                     update_user_counts       Recompute follower/following/friend/group/post/response/event/
                                              event_instance counts for every User, correcting any drift
@@ -280,8 +280,8 @@ class Jonline < Formula
                   _jonline_exec_bin delete_unowned_media "$@"
                 }
                 
-                sync_event_sync_sources() {
-                  _jonline_exec_bin sync_event_sync_sources "$@"
+                sync_sources() {
+                  _jonline_exec_bin sync_sources "$@"
                 }
                 
                 update_user_counts() {
