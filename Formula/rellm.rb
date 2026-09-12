@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-49702a0/rellm-0.5.553-49702a0-macos-arm64.tar.gz"
-  sha256 "07a4502d053b9f28464123b8b9812df49ce47983041ede1db674622f8d3d729d"
-  version "0.5.553-49702a0"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-eed1abc/rellm-0.5.553-eed1abc-macos-arm64.tar.gz"
+  sha256 "0e2cff4f83fa5d6fed024e859b55c2808c559377cd1228f960403e82f9979897"
+  version "0.5.553-eed1abc"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -145,7 +145,7 @@ class Rellm < Formula
                     sync_sources             Sync any SyncSource (ICS subscription) that's due, per its
                                              sync_interval_seconds/last_synced_at
                     update_user_counts       Recompute follower/following/friend/group/post/response/event/
-                                             event_instance counts for every User, correcting any drift
+                                             occasion counts for every User, correcting any drift
                     convert_media_sizes      Generate small/medium/large resized copies of unprocessed PNG/JPEG
                                              Media via ImageMagick (`magick`, or `convert`+`identify`) and
                                              MP4/QuickTime/WebM Media via `ffmpeg`+`ffprobe`; each must be on
