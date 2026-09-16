@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-c63726e/rellm-0.5.553-c63726e-macos-arm64.tar.gz"
-  sha256 "ee8a6746addbc99ae8c312186bcc9b24f09033460dd56060d8819650c0437ad0"
-  version "0.5.553-c63726e"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-dd8d877/rellm-0.5.553-dd8d877-macos-arm64.tar.gz"
+  sha256 "4879433ac0203e95b16d44c39e47fedf5cb90bed08477c942b18582abf48e9d2"
+  version "0.5.553-dd8d877"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -78,7 +78,7 @@ class Rellm < Formula
                   environment edit_environment
                   local_db_create local_db_drop local_db_reset local_db_connect
                   local_minio_start local_minio_create local_minio_delete
-                  delete_expired_tokens delete_unowned_media sync_sources update_user_counts convert_media_sizes generate_preview_images
+                  delete_expired_tokens delete_unowned_media sync_sources update_user_counts convert_media_sizes renew_market_subscriptions generate_preview_images
                   set_permission delete_preview_images disable_cdn_grpc free_all_cluster_resources
                   to_db_id to_proto_id grpcurl
                   deploy
@@ -117,7 +117,7 @@ class Rellm < Formula
                     jobs                     Run background jobs on a loop (#{etc}/rellm/background_jobs.sh) --
                                              delete_expired_tokens every 2m, delete_unowned_media every 8h,
                                              sync_sources every 1m, update_user_counts every 1h,
-                                             convert_media_sizes every 10m, ...
+                                             convert_media_sizes every 10m, renew_market_subscriptions every 1h, ...
                     version                  Print the Rellm server version (rellm-server --version)
                     local_instances_stop     Stop any running rellm-server processes
                     help                     Show this help text
@@ -151,6 +151,10 @@ class Rellm < Formula
                                              MP4/QuickTime/WebM Media via `ffmpeg`+`ffprobe`; each must be on
                                              your $PATH to convert its media types -- skips those media types
                                              (logging an error) if missing
+                    renew_market_subscriptions
+                                             Charge/renew any due Rellm Marketplace MarketSubscription (media
+                                             storage/AI grant/Rellm hosting) via Stripe, applying the renewed
+                                             entitlement on success or ending the subscription on failure
                     generate_preview_images  Generate media preview images -- NOT currently supported on
                                              macOS: it launches a browser hardcoded to /usr/bin/brave-browser,
                                              a Linux path that Homebrew's Brave cask doesn't populate (and
@@ -300,6 +304,10 @@ class Rellm < Formula
                 # if neither tool is found.
                 convert_media_sizes() {
                   _rellm_exec_bin convert_media_sizes "$@"
+                }
+                
+                renew_market_subscriptions() {
+                  _rellm_exec_bin renew_market_subscriptions "$@"
                 }
                 
                 # Renders media preview images headlessly via a browser hardcoded to
