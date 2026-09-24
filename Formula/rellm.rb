@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20260924123142-756c435/rellm-0.5.553-20260924123142-756c435-macos-arm64.tar.gz"
-  sha256 "bc17fbb8061bb00e74fd4cdabab95627969ce6102e2c1ca4bf35b01eca44742c"
-  version "0.5.553-20260924123142-756c435"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20260924165721-0709ffa/rellm-0.5.553-20260924165721-0709ffa-macos-arm64.tar.gz"
+  sha256 "94659950b9185cce46f7451eb9923cf6440dac2164f5558b4f93e908b86d9d4b"
+  version "0.5.553-20260924165721-0709ffa"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -232,9 +232,13 @@ class Rellm < Formula
                   local_minio_start || _do_local_minio_create
                 }
                 
+                # bitnamilegacy/minio, not minio/minio -- MinIO pulled minio/minio from Docker Hub entirely
+                # (404s) and locked down anonymous pulls of quay.io/minio/minio too, after archiving the OSS
+                # project. bitnamilegacy/minio is Bitnami's frozen/unsupported-but-still-pullable image; it
+                # starts the server itself via its own entrypoint, so no `server /data` command override.
                 _do_local_minio_create() {
                   mkdir -p "$RELLM_MINIO_DATA_DIR"
-                  docker run -d -p 9000:9000 -p 9090:9090 --name "$RELLM_MINIO_CONTAINER" -v "$RELLM_MINIO_DATA_DIR:/data" -e "MINIO_ROOT_USER=$MINIO_ACCESS_KEY" -e "MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY" minio/minio server /data --console-address ":9090"
+                  docker run -d -p 9000:9000 -p 9090:9090 --name "$RELLM_MINIO_CONTAINER" -v "$RELLM_MINIO_DATA_DIR:/bitnami/minio/data" -e "MINIO_ROOT_USER=$MINIO_ACCESS_KEY" -e "MINIO_ROOT_PASSWORD=$MINIO_SECRET_KEY" -e "MINIO_BROWSER=on" -e "MINIO_CONSOLE_PORT_NUMBER=9090" bitnamilegacy/minio:latest
                 }
                 
                 local_minio_delete() {
