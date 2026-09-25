@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20260924190502-66c0418/rellm-0.5.553-20260924190502-66c0418-macos-arm64.tar.gz"
-  sha256 "0d9a310f8d1e7810b8a7636d3c60a6782ffd2442bdd6c6e2bc16587d1e3f6d47"
-  version "0.5.553-20260924190502-66c0418"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20260925213640-eb25643/rellm-0.5.553-20260925213640-eb25643-macos-arm64.tar.gz"
+  sha256 "108b725090a1f5d5f4161d46f11fb46666ba20ab6b3bcd0e5609cd76d0c7ad97"
+  version "0.5.553-20260925213640-eb25643"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -79,6 +79,7 @@ class Rellm < Formula
                   local_db_create local_db_drop local_db_reset local_db_connect
                   local_object_storage_start local_object_storage_create local_object_storage_delete
                   delete_expired_tokens delete_unowned_media sync_sources update_user_counts convert_media_sizes renew_market_subscriptions generate_preview_images
+                  calculate_server_media_usage calculate_server_object_storage_usage
                   set_permission delete_preview_images disable_cdn_grpc free_all_cluster_resources
                   to_db_id to_proto_id grpcurl
                   deploy
@@ -158,6 +159,14 @@ class Rellm < Formula
                                              Charge/renew any due Rellm Marketplace MarketSubscription (media
                                              storage/AI grant/Rellm hosting) via Stripe, applying the renewed
                                              entitlement on success or ending the subscription on failure
+                    calculate_server_media_usage
+                                             Recompute MediaSettings.server_media_usage_bytes from the media
+                                             table, correcting any drift the incremental adjustments made at
+                                             CreateMedia/delete/conversion time missed
+                    calculate_server_object_storage_usage
+                                             Recompute MediaSettings.server_object_storage_usage_bytes by
+                                             listing and summing every object in object storage directly -- a
+                                             drift check against server_media_usage_bytes above
                     generate_preview_images  Generate media preview images -- NOT currently supported on
                                              macOS: it launches a browser hardcoded to /usr/bin/brave-browser,
                                              a Linux path that Homebrew's Brave cask doesn't populate (and
@@ -316,6 +325,14 @@ class Rellm < Formula
                 
                 renew_market_subscriptions() {
                   _rellm_exec_bin renew_market_subscriptions "$@"
+                }
+                
+                calculate_server_media_usage() {
+                  _rellm_exec_bin calculate_server_media_usage "$@"
+                }
+                
+                calculate_server_object_storage_usage() {
+                  _rellm_exec_bin calculate_server_object_storage_usage "$@"
                 }
                 
                 # Renders media preview images headlessly via a browser hardcoded to
