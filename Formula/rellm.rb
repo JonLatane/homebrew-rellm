@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20261003015708-2f1a56e/rellm-0.5.553-20261003015708-2f1a56e-macos-arm64.tar.gz"
-  sha256 "85cc3f11e5e185f4c80c0588c128554bbd094433a8e13066083788806f700ff9"
-  version "0.5.553-20261003015708-2f1a56e"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20261003020950-ef9ae6e/rellm-0.5.553-20261003020950-ef9ae6e-macos-arm64.tar.gz"
+  sha256 "407dfe97183718a42498be7fa90b30b520b38aed9bc284923fa94211d4270589"
+  version "0.5.553-20261003020950-ef9ae6e"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -109,7 +109,9 @@ class Rellm < Formula
                   Core/Lifecycle:
                 
                     server_and_jobs          Run the Rellm server and background jobs together
-                                             (forks server + jobs, see below); accepts server's flags
+                                             (forks server + jobs, see below); accepts server's flags.
+                                             Output is prefixed [server]/[jobs] (stderr merged in); see
+                                             "Logging" below for rotation and syslog.
                     server                   Run the Rellm server (rellm-server)
                                              --no-internal-server   Don't start the internal-only mail
                                                                      delivery server (27705) used by a
@@ -122,6 +124,13 @@ class Rellm < Formula
                     version                  Print the Rellm server version (rellm-server --version)
                     local_instances_stop     Stop any running rellm-server processes
                     help                     Show this help text
+                
+                  Logging (server_and_jobs only; set in the environment or ~/.rellm):
+                
+                    RELLM_LOG_FILE=<path>    Write to this file instead of stdout, rotating it
+                    RELLM_LOG_MAX_BYTES=<n>  Rotate at this size (default 10485760, i.e. 10 MB)
+                    RELLM_LOG_KEEP=<n>       Rotated files to keep (default 5): <path>.1 ... <path>.<n>
+                    RELLM_SYSLOG=1           Also send every line to syslog/journald (logger -t rellm)
                 
                   Environment/Configuration:
                 
@@ -281,6 +290,62 @@ class Rellm < Formula
                   cd "#{etc}/rellm" && exec "./${bin}" "$@"
                 }
                 
+                # --- Log handling for server_and_jobs -------------------------------------
+                # Every line the server and jobs print is prefixed "[server] " / "[jobs] " (jobs
+                # additionally tag themselves, e.g. "[jobs] [sync_sources] ..."), with stderr (panics,
+                # tool errors) merged into the same stream as stdout. Optional environment variables
+                # (set in the environment, or in ~/.rellm):
+                #   RELLM_LOG_FILE        Append to this file (rotated, see below) instead of stdout.
+                #   RELLM_LOG_MAX_BYTES   Rotate RELLM_LOG_FILE once it passes this size (default
+                #                         10485760 = 10 MB). Rotated to FILE.1 ... FILE.<RELLM_LOG_KEEP>.
+                #   RELLM_LOG_KEEP        Number of rotated files to keep (default 5).
+                #   RELLM_SYSLOG=1        Also send every line to syslog/journald via `logger -t rellm`.
+                _rellm_file_size() {
+                  stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || echo 0
+                }
+                
+                _rellm_rotate_log() {
+                  local file="$1" keep="${RELLM_LOG_KEEP:-5}" i
+                  rm -f "$file.$keep"
+                  i=$((keep - 1))
+                  while [ "$i" -ge 1 ]; do
+                    if [ -f "$file.$i" ]; then
+                      mv "$file.$i" "$file.$((i + 1))"
+                    fi
+                    i=$((i - 1))
+                  done
+                  mv "$file" "$file.1"
+                }
+                
+                # Reads stdin, writes each line prefixed with "[$1] " to stdout, or to RELLM_LOG_FILE with
+                # size-based rotation (the file is reopened per line, so rotating under a concurrent
+                # writer -- server and jobs share the file -- is safe), and/or to syslog.
+                _rellm_log_pipe() {
+                  local label="$1" line count=0 max="${RELLM_LOG_MAX_BYTES:-10485760}"
+                  local file="${RELLM_LOG_FILE:-}"
+                  if [ -n "$file" ]; then
+                    mkdir -p "$(dirname "$file")"
+                  fi
+                  if [ "${RELLM_SYSLOG:-}" = "1" ] && command -v logger >/dev/null 2>&1; then
+                    exec 3> >(logger -t rellm)
+                  else
+                    exec 3>/dev/null
+                  fi
+                  while IFS= read -r line || [ -n "$line" ]; do
+                    line="[$label] $line"
+                    if [ -n "$file" ]; then
+                      printf '%s\n' "$line" >> "$file"
+                      count=$((count + 1))
+                      if [ $((count % 50)) -eq 0 ] && [ "$(_rellm_file_size "$file")" -gt "$max" ]; then
+                        _rellm_rotate_log "$file"
+                      fi
+                    else
+                      printf '%s\n' "$line"
+                    fi
+                    printf '%s\n' "$line" >&3
+                  done
+                }
+                
                 server() {
                   _rellm_exec_bin rellm-server "$@"
                 }
@@ -294,10 +359,12 @@ class Rellm < Formula
                 # Forks `server` and `jobs`, killing both if either the script exits or one
                 # of them dies. Any args (e.g. --no-internal-server) are forwarded to
                 # `server` only -- `jobs`/background_jobs.sh takes none.
+                # Output is labeled, merged, and optionally rotated/sent to syslog -- see
+                # _rellm_log_pipe above.
                 server_and_jobs() {
-                  jobs &
+                  jobs > >(_rellm_log_pipe jobs) 2>&1 &
                   local jobs_pid=$!
-                  server "$@" &
+                  server "$@" > >(_rellm_log_pipe server) 2>&1 &
                   local server_pid=$!
                   trap 'kill "$jobs_pid" "$server_pid" 2>/dev/null || true' EXIT TERM INT
                   wait
@@ -506,6 +573,22 @@ class Rellm < Formula
     # to capture the scripts, which Homebrew installs into the
     # right completions dirs.
     generate_completions_from_executable(bin/"rellm", "completion", shells: [:bash, :zsh])
+  end
+
+  # `brew services start rellm` -- runs `rellm server_and_jobs`. The launcher
+  # itself writes the merged, [server]/[jobs]-labeled output to
+  # RELLM_LOG_FILE with size-based rotation and mirrors it to syslog (see
+  # docs/rellm_homebrew.sh), so launchd's own log only catches launcher errors.
+  # opt_bin (not bin) survives upgrades; std_service_path_env puts Homebrew's
+  # bin on PATH for the jobs' optional ImageMagick/ffmpeg.
+  service do
+    run [opt_bin/"rellm", "server_and_jobs"]
+    keep_alive true
+    environment_variables PATH: std_service_path_env,
+                          RELLM_LOG_FILE: "#{var}/log/rellm.log",
+                          RELLM_SYSLOG: "1"
+    log_path var/"log/rellm-service.log"
+    error_log_path var/"log/rellm-service.log"
   end
 
   test do
