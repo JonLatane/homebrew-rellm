@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20261003020950-ef9ae6e/rellm-0.5.553-20261003020950-ef9ae6e-macos-arm64.tar.gz"
-  sha256 "407dfe97183718a42498be7fa90b30b520b38aed9bc284923fa94211d4270589"
-  version "0.5.553-20261003020950-ef9ae6e"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20261003031009-4d1aa01/rellm-0.5.553-20261003031009-4d1aa01-macos-arm64.tar.gz"
+  sha256 "2ddaec79040ff0be0742ab65ce72570370bbd156ef6e2c8b9d165d95b1a6cbe2"
+  version "0.5.553-20261003031009-4d1aa01"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
@@ -80,7 +80,7 @@ class Rellm < Formula
                   local_object_storage_start local_object_storage_create local_object_storage_delete
                   delete_expired_tokens delete_unowned_media sync_sources update_user_counts convert_media_sizes renew_market_subscriptions generate_link_preview_images regenerate_link_preview_images_for_post
                   calculate_server_media_usage calculate_server_object_storage_usage
-                  set_permission delete_preview_images disable_cdn_grpc free_all_cluster_resources
+                  set_permission delete_link_preview_images disable_cdn_grpc free_all_cluster_resources
                   to_db_id to_proto_id grpcurl
                   deploy
                   completion
@@ -197,7 +197,8 @@ class Rellm < Formula
                 
                     set_permission           Grant/revoke a global permission for a user by username
                                              e.g.: rellm set_permission <my_admin_username> admin on
-                    delete_preview_images    Delete generated preview images, e.g. to force regeneration
+                    delete_link_preview_images
+                                             Delete generated preview images, e.g. to force regeneration
                     disable_cdn_grpc         Disable the experimental gRPC CDN settings, as an "escape hatch" in case you
                                              mess up your CDN configuration in the web UI and lose gRPC access.
                     free_all_cluster_resources
@@ -429,8 +430,8 @@ class Rellm < Formula
                   _rellm_exec_bin set_permission "$@"
                 }
                 
-                delete_preview_images() {
-                  _rellm_exec_bin delete_preview_images "$@"
+                delete_link_preview_images() {
+                  _rellm_exec_bin delete_link_preview_images "$@"
                 }
                 
                 disable_cdn_grpc() {
