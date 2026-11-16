@@ -5,9 +5,9 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20261115225233-1cc1cba/rellm-0.5.553-20261115225233-1cc1cba-macos-arm64.tar.gz"
-  sha256 "f6f096d726f9077fa0fdf89a00bfb80c119076f7fd161878f7cc95d033e04d79"
-  version "0.5.553-20261115225233-1cc1cba"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.553-20261116004750-9523611/rellm-0.5.553-20261116004750-9523611-macos-arm64.tar.gz"
+  sha256 "aff289549bbf75971810f14aafb45ce21fc21565e09c1d69f211e1d278946e9d"
+  version "0.5.553-20261116004750-9523611"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
