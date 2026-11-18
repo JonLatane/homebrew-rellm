@@ -5,16 +5,20 @@
 class Rellm < Formula
   desc "Rellm federated social server"
   homepage "https://github.com/jonlatane/rellm"
-  url "https://github.com/jonlatane/rellm/releases/download/v0.5.554-20261117160245-bd02cfe/rellm-0.5.554-20261117160245-bd02cfe-macos-arm64.tar.gz"
-  sha256 "7e04780f2253d4083c1c051e04d013d438b7f618aee770faae28fd4d89b908bb"
-  version "0.5.554-20261117160245-bd02cfe"
+  url "https://github.com/jonlatane/rellm/releases/download/v0.5.554-20261118141030-ed10f12/rellm-0.5.554-20261118141030-ed10f12-macos-arm64.tar.gz"
+  sha256 "1ab77de704780cb30e936660d4d752e8bbcb344da828cf4ed1510410192eba10"
+  version "0.5.554-20261118141030-ed10f12"
   license "AGPL-3.0-only"
 
   depends_on arch: :arm64
   depends_on "libpq"
 
   def install
-    (etc/"rellm").install Dir["*"]
+    # libexec (a per-version Cellar dir), NOT etc: Homebrew never overwrites an
+    # existing, differing file under etc -- it writes "<file>.default" beside it --
+    # so installing the binaries there left every upgrade running the first
+    # version's rellm-server (`rellm version` never changed).
+    libexec.install Dir["*"]
     (bin/"rellm").write <<~SCRIPT
                 #!/bin/bash
                 #
@@ -27,7 +31,7 @@ class Rellm < Formula
                 # .github/workflows/server_ci_cd.yml -- don't hand-edit the generated
                 # Formula, edit this file instead.
                 #
-                # The one placeholder below, #{etc}, is replaced by that CI step with
+                # The one placeholder below, @@RELLM_ETC@@, is replaced by that CI step with
                 # a Ruby string interpolation of the formula's `etc` accessor, which Homebrew
                 # resolves to the formula's installed etc/ prefix (e.g. /opt/homebrew/etc)
                 # when the user runs `brew install`. That path isn't known until install time
@@ -41,7 +45,7 @@ class Rellm < Formula
                 # NOTE: because this whole file is embedded via an interpolated Ruby heredoc,
                 # any other literal Ruby interpolation syntax written below (a hash followed
                 # immediately by a brace) would also get evaluated by Ruby at formula-write
-                # time. Don't introduce one outside of the #{etc} substitution step.
+                # time. Don't introduce one outside of the @@RELLM_ETC@@ substitution step.
                 #
                 set -euo pipefail
                 
@@ -134,7 +138,7 @@ class Rellm < Formula
                                                                      delivery server (27705) used by a
                                                                      Stalwart mail server -- irrelevant to
                                                                      most deploys
-                    jobs                     Run background jobs on a loop (#{etc}/rellm/background_jobs.sh) --
+                    jobs                     Run background jobs on a loop (#{opt_libexec}/background_jobs.sh) --
                                              delete_expired_tokens every 2m, delete_unowned_media every 8h,
                                              sync_sources every 1m, update_user_counts every 1h,
                                              convert_media_sizes every 10m, renew_market_subscriptions every 1h, ...
@@ -243,7 +247,7 @@ class Rellm < Formula
                                                rellm deploy create_external_backend NAMESPACE=my_namespace
                                                rellm deploy create_backend_data create_internal_backend NAMESPACE=my_namespace
                                              NAMESPACE=... is required by nearly every target -- there's no
-                                             default. See #{etc}/rellm/opt/deploys/README.md (bundled
+                                             default. See #{opt_libexec}/opt/deploys/README.md (bundled
                                              alongside this package) for the full target reference.
                 
                                              -n <ns> / --namespace <ns> work in place of NAMESPACE=<ns> (as with kubectl).
@@ -357,11 +361,11 @@ class Rellm < Formula
                 }
                 
                 # Shared by every command below that execs one of the package's binaries
-                # (rellm-server, delete_expired_tokens, grpcurl, ...) from #{etc}/rellm.
+                # (rellm-server, delete_expired_tokens, grpcurl, ...) from #{opt_libexec}.
                 _rellm_exec_bin() {
                   local bin="$1"
                   shift
-                  cd "#{etc}/rellm" && exec "./${bin}" "$@"
+                  cd "#{opt_libexec}" && exec "./${bin}" "$@"
                 }
                 
                 # --- Log handling for server_and_jobs -------------------------------------
@@ -432,7 +436,7 @@ class Rellm < Formula
                 # Runs background_jobs.sh (resolves its own job binaries -- see
                 # backend/background_jobs.sh).
                 jobs() {
-                  cd "#{etc}/rellm" && exec ./background_jobs.sh "$@"
+                  cd "#{opt_libexec}" && exec ./background_jobs.sh "$@"
                 }
                 
                 # Forks `server` and `jobs`, killing both if either the script exits or one
@@ -540,14 +544,18 @@ class Rellm < Formula
                 # Bundled alongside deploys/Makefile (see the "Assemble .../etc/rellm package layout" step of
                 # .github/workflows/server_ci_cd.yml's create_homebrew_release job) -- see deploys/distributables.sh
                 # for the shared `deploy`/target-listing implementation both this and docs/rellm_linux.sh use.
-                _rellm_deploys_dir="#{etc}/rellm/opt/deploys"
+                _rellm_deploys_dir="#{opt_libexec}/opt/deploys"
                 
                 # Runs `make` targets from the bundled deploys/Makefile against your own K8s cluster -- args are
                 # forwarded as-is, so both targets and VAR=value overrides (e.g. NAMESPACE=my_namespace, required
                 # by nearly every target -- see deploys/README.md) just work, same as running `make` by hand.
+                #
+                # The bundled deploys dir lives in Homebrew's versioned (libexec) package, which each upgrade
+                # replaces and `brew cleanup` deletes, so durable output can't go in it: Postgres dumps default to
+                # ~/.rellm_backups instead of the Makefile's in-package backups/ (override with PG_BACKUP_DIR=...).
                 deploy() {
                   . "$_rellm_deploys_dir/distributables.sh"
-                  _rellm_deploys_run "$_rellm_deploys_dir" "$@"
+                  PG_BACKUP_DIR="${PG_BACKUP_DIR:-$HOME/.rellm_backups}" _rellm_deploys_run "$_rellm_deploys_dir" "$@"
                 }
                 
                 # Used by `completion`'s deploy-target completion below.
